@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Created with SharpDevelop 3.
  * User: F. Phoenix
  * Date: 09.11.2011
@@ -15,10 +15,12 @@ namespace Wesnoth_PO_Sorter
 {
 	public partial class MainForm : Form
 	{
+		bool Unix = System.Environment.OSVersion.Platform == PlatformID.Unix;
+		
 		Dictionary<string, string> Languages;
 		string Language = "ru";
 		List<string> MRU;
-		const int MAXMRU = 20;
+		const int MAXMRU = 25;
 		
 		public MainForm()
 		{
@@ -222,7 +224,7 @@ namespace Wesnoth_PO_Sorter
 		
 		void cbDirs_DragDrop(object sender, DragEventArgs e)
         {
-			((ComboBox)sender).Text = ((string[])e.Data.GetData(DataFormats.FileDrop))[0];
+			((ComboBox)sender).Text = SearchPath(((string[])e.Data.GetData(DataFormats.FileDrop))[0]);
         }
 		
 		void cbLanguage_SelectedIndexChanged(object sender, EventArgs e)
@@ -241,31 +243,34 @@ namespace Wesnoth_PO_Sorter
 			if (MRU.Count > MAXMRU)
 				MRU.RemoveRange(MAXMRU, MRU.Count - MAXMRU);
 			
-			string[] arr = new string[MRU.Count];
-			MRU.CopyTo(arr);
-//			cbSourceDir.BeginUpdate();
-//			cbTargetDir.BeginUpdate();
+			cbSourceDir.BeginUpdate();
+			cbTargetDir.BeginUpdate();
 			cbSourceDir.Items.Clear();
-			cbSourceDir.Items.AddRange(arr);
 			cbTargetDir.Items.Clear();
-			cbTargetDir.Items.AddRange(arr);
-//			cbSourceDir.EndUpdate();
-//			cbTargetDir.EndUpdate();
+			foreach (string dir in MRU)
+				if (Directory.Exists(dir))
+				{
+					cbSourceDir.Items.Add(dir);
+					cbTargetDir.Items.Add(dir);
+				}
+			cbSourceDir.EndUpdate();
+			cbTargetDir.EndUpdate();
 		}
 		
 		string SearchPath(string path)
 		{
 			var slashes = new char[]{'\\', '/'};
 			while (path.Length > 0 && !Directory.Exists(path))
-				path = path.Remove(Math.Max(0, path.LastIndexOfAny(slashes)));
+				path = path.Remove(Math.Max(0, Unix ? path.LastIndexOf('/') : path.LastIndexOfAny(slashes)));
 			
 			return path;
 		}
 		
 		string FormatPath(string path)
 		{
-			if (!path.EndsWith(@"\") && !path.EndsWith("/")) path += "/";
-			    return path;
+			if (!path.EndsWith("/") && (Unix || !path.EndsWith(@"\")))
+				path += "/";
+			return path;
 		}
 		
 		bool CopyFile(string src_path, string dest_dir, string dest_file)
